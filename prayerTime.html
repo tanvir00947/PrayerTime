@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html>
+<head><title>Prayer Times by City</title></head>
+<body>
+  <h2>Select Your City</h2>
+  <input type="text" id="cityInput" placeholder="Type city name...">
+  <button onclick="searchCity()">Search</button>
+  <ul id="suggestions"></ul>
+  <button onclick="useMyLocation()">Use My Location</button>
+  <pre id="output"></pre>
+
+  <script>
+    const output = document.getElementById("output");
+    const suggestions = document.getElementById("suggestions");
+    const today = new Date().toISOString().split('T')[0];
+
+    async function searchCity() {
+      const q = document.getElementById("cityInput").value;
+      if (!q) return;
+      const res = await fetch(`https://geocoding-api.open-meteo.com/v1/search?name=${encodeURIComponent(q)}&count=5`);
+      const data = await res.json();
+      suggestions.innerHTML = '';
+      (data.results || []).forEach(loc => {
+        const li = document.createElement("li");
+        li.textContent = `${loc.name}, ${loc.country}`;
+        li.onclick = () => fetchPrayer(loc.latitude, loc.longitude);
+        suggestions.appendChild(li);
+      });
+    }
+
+    function useMyLocation() {
+      if (navigator.geolocation) {
+        navigator.geolocation.getCurrentPosition(pos => {
+          fetchPrayer(pos.coords.latitude, pos.coords.longitude);
+        }, err => output.textContent = "Location access denied.");
+      } else output.textContent = "Geolocation not supported.";
+    }
+
+    async function fetchPrayer(lat, lon) {
+      suggestions.innerHTML = '';
+      const res = await fetch(`https://api.aladhan.com/v1/timings/${today}?latitude=${lat}&longitude=${lon}&method=1&school=1`);
+      const data = await res.json();
+      output.textContent = JSON.stringify(data.data.timings, null, 2);
+    }
+  </script>
+</body>
+</html>
